@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import styles from "./login.module.css";
 
 const trustItems = [
@@ -24,6 +27,46 @@ const highlights = [
 ];
 
 export default function LoginPage() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get("email");
+    const password = formData.get("password");
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/auth/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: email, // Django uses username by default, we use email as username
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem("token", data.token);
+        alert("Login exitoso!");
+        window.location.href = "/";
+      } else {
+        setError(data.non_field_errors?.[0] || "Credenciales invalidas");
+      }
+    } catch (err) {
+      setError("Error de conexion con el servidor");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className={styles.shell}>
       <header className={styles.topbar}>
@@ -95,7 +138,7 @@ export default function LoginPage() {
             </Link>
           </nav>
 
-          <form className={styles.form}>
+          <form className={styles.form} onSubmit={handleSubmit}>
             <label>
               Correo electronico
               <input type="email" name="email" placeholder="tu@correo.com" required />
@@ -105,6 +148,8 @@ export default function LoginPage() {
               Contraseña
               <input type="password" name="password" placeholder="********" required />
             </label>
+
+            {error && <p style={{ color: "red", fontSize: "0.8rem" }}>{error}</p>}
 
             <div className={styles.inlineRow}>
               <label className={styles.checkboxLabel}>
@@ -116,8 +161,8 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <button type="submit" className={styles.submitButton}>
-              Iniciar sesion
+            <button type="submit" className={styles.submitButton} disabled={loading}>
+              {loading ? "Cargando..." : "Iniciar sesion"}
             </button>
           </form>
 

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import styles from "../login/login.module.css";
 
 const benefits = [
@@ -9,6 +12,55 @@ const benefits = [
 ];
 
 export default function RegistroPage() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const formData = new FormData(event.currentTarget);
+    const name = formData.get("name");
+    const email = formData.get("email");
+    const password = formData.get("password");
+    const passwordConfirm = formData.get("passwordConfirm");
+
+    if (password !== passwordConfirm) {
+      setError("Las contraseñas no coinciden");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/auth/register/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: email, // Using email as username
+          email: email,
+          password: password,
+          first_name: name, // Simplified mapping
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("Cuenta creada con éxito! Ahora puedes iniciar sesión.");
+        window.location.href = "/login";
+      } else {
+        setError(JSON.stringify(data));
+      }
+    } catch (err) {
+      setError("Error de conexion con el servidor");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className={styles.shell}>
       <header className={styles.topbar}>
@@ -64,7 +116,7 @@ export default function RegistroPage() {
             </Link>
           </nav>
 
-          <form className={styles.form}>
+          <form className={styles.form} onSubmit={handleSubmit}>
             <label>
               Nombre completo o empresa
               <input type="text" name="name" placeholder="Ej. Ana Gomez / Rental Pro SAS" required />
@@ -96,13 +148,15 @@ export default function RegistroPage() {
               <input type="password" name="passwordConfirm" placeholder="Repite la contraseña" required />
             </label>
 
+            {error && <p style={{ color: "red", fontSize: "0.8rem" }}>{error}</p>}
+
             <label className={styles.checkboxLabel}>
               <input type="checkbox" name="terms" required />
               Acepto terminos, politica de uso y tratamiento de datos
             </label>
 
-            <button type="submit" className={styles.submitButton}>
-              Crear cuenta
+            <button type="submit" className={styles.submitButton} disabled={loading}>
+              {loading ? "Creando cuenta..." : "Crear cuenta"}
             </button>
           </form>
 
