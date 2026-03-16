@@ -54,7 +54,8 @@ export default function RegistroPage() {
       } else {
         setError(JSON.stringify(data));
       }
-    } catch (err) {
+    } catch (error) {
+      console.error(error);
       setError("Error de conexion con el servidor");
     } finally {
       setLoading(false);

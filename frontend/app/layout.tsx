@@ -1,22 +1,26 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Manrope, Space_Grotesk } from "next/font/google";
+import { Nunito_Sans } from "next/font/google";
 import "./globals.css";
 
-const manrope = Manrope({
+const nunito = Nunito_Sans({
   subsets: ["latin"],
   variable: "--font-body",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-display",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Renthing | Frontend de alquiler colaborativo",
+  title: "Renthing | Alquiler colaborativo de productos",
   description:
-    "Frontend de Renthing: plataforma de alquiler de productos con verificacion, dashboard, filtros, calendario, chat, empresas, contratos y asistencia con IA.",
+    "Publica, alquila y gestiona productos de forma segura. La plataforma de alquiler colaborativo con verificación, depósitos inteligentes y contratos digitales.",
+  keywords: [
+    "alquiler",
+    "renta",
+    "productos",
+    "marketplace",
+    "alquiler colaborativo",
+    "Renthing",
+  ],
 };
 
 export default function RootLayout({
@@ -26,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${manrope.variable} ${spaceGrotesk.variable}`}>
+      <body className={nunito.variable}>
         {children}
       </body>
     </html>

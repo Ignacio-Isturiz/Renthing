@@ -60,7 +60,8 @@ export default function LoginPage() {
       } else {
         setError(data.non_field_errors?.[0] || "Credenciales invalidas");
       }
-    } catch (err) {
+    } catch (error) {
+      console.error(error);
       setError("Error de conexion con el servidor");
     } finally {
       setLoading(false);
@@ -71,7 +72,6 @@ export default function LoginPage() {
     <main className={styles.shell}>
       <header className={styles.topbar}>
         <Link href="/" className={styles.brand} aria-label="Volver a inicio Renthing">
-          <span className={styles.brandMark}>R</span>
           <span>Renthing</span>
         </Link>
         <div className={styles.topbarActions}>
