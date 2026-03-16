@@ -1,11 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AuthModal from "./AuthModal";
 
 export default function Header() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    // Check if token exists in localStorage
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setIsLoggedIn(false);
+    setIsMenuOpen(false);
+    window.location.reload();
+  };
 
   return (
     <>
@@ -21,9 +36,41 @@ export default function Header() {
           </nav>
 
           <div className="header-actions">
-            <button type="button" className="header-access-btn" onClick={() => setIsAuthOpen(true)}>
-              Acceder
-            </button>
+            {isLoggedIn ? (
+              <div className="header-profile-container">
+                <div 
+                  className="header-profile" 
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                >
+                  <img 
+                    src="/images/default-avatar.jpg" 
+                    alt="Perfil de usuario" 
+                    className="header-avatar"
+                  />
+                </div>
+                
+                {isMenuOpen && (
+                  <div className="header-dropdown">
+                    <button 
+                      type="button" 
+                      className="header-dropdown-item logout-btn"
+                      onClick={handleLogout}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                      </svg>
+                      Cerrar sesión
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button type="button" className="header-access-btn" onClick={() => setIsAuthOpen(true)}>
+                Acceder
+              </button>
+            )}
           </div>
         </div>
       </header>

@@ -138,6 +138,74 @@ input {
   cursor: pointer;
 }
 
+.header-profile-container {
+  position: relative;
+}
+
+.header-profile {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--color-border);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.header-profile:hover {
+  transform: scale(1.05);
+  border-color: var(--color-lime);
+}
+
+.header-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.header-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  min-width: 160px;
+  padding: 6px;
+  box-shadow: 0 10px 25px rgba(2, 65, 109, 0.15);
+  z-index: 100;
+  animation: slideUp 0.2s ease;
+}
+
+.header-dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-dropdown-item:hover {
+  background: rgba(174, 221, 43, 0.15);
+  color: var(--color-blue-dark);
+}
+
+.logout-btn {
+  color: #d32f2f;
+}
+
+.logout-btn:hover {
+  background: #fff5f5;
+  color: #b71c1c;
+}
+
 .hero-section {
   min-height: 100vh;
   background-image: linear-gradient(120deg, rgba(2, 65, 109, 0.72), rgba(6, 102, 153, 0.36)),
@@ -871,16 +939,44 @@ input {
 
   .hero-section,
   .hero-inner {
-    min-height: 92vh;
+    min-height: 80vh; /* Reduced from 92vh to ensure visibility */
   }
 
   .hero-inner {
-    padding-top: 104px;
+    padding-top: 80px; /* Reduced from 104px */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center; /* Centering vertically */
+    text-align: center;
+  }
+
+  .hero-shell {
+    align-items: center;
+    max-width: 100%;
+    margin-top: 0;
   }
 
   .hero-bg-text {
-    transform: translate(-50%, -34%);
-    font-size: clamp(4rem, 26vw, 9rem);
+    display: none; /* Hide confusing background text on mobile */
+  }
+
+  .hero-search {
+    width: 100%;
+    flex-direction: column;
+    background: transparent;
+    gap: 10px;
+  }
+
+  .hero-search input {
+    width: 100%;
+    border-radius: 999px;
+    background: rgba(248, 248, 236, 0.94);
+  }
+
+  .hero-search button {
+    width: 100%;
+    border-radius: 999px;
   }
 
   .catalog-section {
