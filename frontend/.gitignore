@@ -9,3 +9,6 @@ pnpm-debug.log*
 .DS_Store
 .env.local
 .env*.local
+.vscode
+__pycache__/
+*.pyc
