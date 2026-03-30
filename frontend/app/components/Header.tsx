@@ -2,22 +2,18 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
 import AuthModal from "./AuthModal";
 
 export default function Header() {
+  const { data: session, status } = useSession();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  useEffect(() => {
-    // Check if token exists in localStorage
-    const token = localStorage.getItem("token");
-    setIsLoggedIn(!!token);
-  }, []);
+  const isLoggedIn = status === "authenticated";
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
     setIsMenuOpen(false);
     window.location.reload();
   };
@@ -43,7 +39,7 @@ export default function Header() {
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
                 >
                   <img 
-                    src="/images/default-avatar.jpg" 
+                    src={session?.user?.image || "/images/default-avatar.jpg"} 
                     alt="Perfil de usuario" 
                     className="header-avatar"
                   />
