@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/dist/client/link";
 
 type AuthTab = "login" | "register";
 
@@ -224,9 +225,13 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
               </div>
             </div>
-            <div className="auth-forgot" style={{ opacity: 0.6, cursor: 'default' }}>
-              Proximamente: ¿Olvidaste tu contraseña?
-            </div>
+            <Link 
+              href="/reestablecer" 
+              className="auth-forgot" 
+              style={{ textDecoration: 'none', color: 'var(--tu-color-primario, #005b9f)', fontSize: '0.875rem', display: 'block', textAlign: 'center', marginTop: '1rem' }}
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
             <button type="submit" className="btn btn--primary auth-submit" disabled={loading}>
               {loading ? "Iniciando..." : "Iniciar sesión"}
             </button>
