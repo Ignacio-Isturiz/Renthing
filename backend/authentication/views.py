@@ -1,12 +1,16 @@
-from rest_framework import generics, status, viewsets
+from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import User
 from .serializers import RegisterSerializer, UserSerializer
 from .models import UserProfile
+from django.core.mail import send_mail
+from django.conf import settings
+from .models import PasswordResetCode
+
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -90,3 +94,59 @@ def google_sign_in(request):
         'token': token.key,
         'user': UserSerializer(user).data
     }, status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def request_password_reset(request):
+    email = request.data.get('email')
+    user = User.objects.filter(email=email).first()
+
+    if user:
+        # Validación de Google
+        if hasattr(user, 'profile') and user.profile.google_id:
+            return Response(
+                {"error": "Inicia sesión con google"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generar código
+        code_obj = PasswordResetCode.objects.create(
+            user=user, 
+            code=PasswordResetCode.generate_code()
+        )
+
+        # Enviar Email (Configura tu SMTP en settings.py)
+        send_mail(
+            'Código de recuperación - Renthing',
+            f'Tu código de verificación es: {code_obj.code}',
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            fail_silently=False,
+        )
+
+    # Por seguridad, siempre respondemos éxito aunque el correo no exista
+    return Response({"message": "Si el correo existe, recibirás un código de 6 dígitos."}, status=status.HTTP_200_OK)
+
+# 2. Verificar y Cambiar Contraseña
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password_confirm(request):
+    email = request.data.get('email')
+    code = request.data.get('code')
+    new_password = request.data.get('new_password')
+
+    user = User.objects.filter(email=email).first()
+    if not user:
+        return Response({"error": "Datos inválidos"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Buscar el código más reciente para este usuario
+    reset_entry = PasswordResetCode.objects.filter(user=user, code=code).last()
+
+    if reset_entry and reset_entry.is_valid():
+        user.set_password(new_password)
+        user.save()
+        reset_entry.is_used = True
+        reset_entry.save()
+        return Response({"message": "Contraseña actualizada con éxito"}, status=status.HTTP_200_OK)
+    
+    return Response({"error": "Código inválido o expirado"}, status=status.HTTP_400_BAD_REQUEST)
