@@ -72,18 +72,30 @@ jobs:
     name: Deploy Backend
     runs-on: ubuntu-latest
     needs: [backend-verify, frontend-verify]
-    if: ${{ secrets.BACKEND_DEPLOY_HOOK_URL != '' }}
 
     steps:
       - name: Trigger backend deploy hook
-        run: curl -fsSL -X POST "${{ secrets.BACKEND_DEPLOY_HOOK_URL }}"
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.BACKEND_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK_URL" ]; then
+            echo "BACKEND_DEPLOY_HOOK_URL is not configured. Skipping backend deploy."
+            exit 0
+          fi
+          curl -fsSL -X POST "$DEPLOY_HOOK_URL"
 
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-latest
     needs: [backend-verify, frontend-verify]
-    if: ${{ secrets.FRONTEND_DEPLOY_HOOK_URL != '' }}
 
     steps:
       - name: Trigger frontend deploy hook
-        run: curl -fsSL -X POST "${{ secrets.FRONTEND_DEPLOY_HOOK_URL }}"
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.FRONTEND_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK_URL" ]; then
+            echo "FRONTEND_DEPLOY_HOOK_URL is not configured. Skipping frontend deploy."
+            exit 0
+          fi
+          curl -fsSL -X POST "$DEPLOY_HOOK_URL"
