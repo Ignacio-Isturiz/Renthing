@@ -1,0 +1,125 @@
+.hero-section {
+  min-height: 100vh;
+  background-image: linear-gradient(120deg, rgba(2, 65, 109, 0.72), rgba(6, 102, 153, 0.36)),
+    url("/images/herogemini.jpg");
+  background-size: cover;
+  background-position: center;
+  color: var(--color-white);
+  display: flex;
+  align-items: flex-start;
+}
+
+.hero-inner {
+  position: relative;
+  width: 100%;
+  padding-top: 124px;
+  min-height: 100vh;
+}
+
+.hero-bg-text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -40%);
+  font-size: clamp(6rem, 24vw, 18rem);
+  font-weight: 800;
+  line-height: 0.75;
+  opacity: 0.92;
+  pointer-events: none;
+  letter-spacing: -0.05em;
+}
+
+.hero-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 630px;
+}
+
+.hero-kicker {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #d6ef88;
+}
+
+.hero-title {
+  font-size: clamp(1.9rem, 5vw, 3.4rem);
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+}
+
+.hero-subline {
+  color: #d0e5f2;
+  max-width: 550px;
+}
+
+.hero-search {
+  display: flex;
+  width: min(520px, 100%);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(248, 248, 236, 0.94);
+}
+
+.hero-search input {
+  border: 0;
+  flex: 1;
+  min-width: 120px;
+  padding: 12px 16px;
+  outline: none;
+}
+
+.hero-search button {
+  border: 0;
+  background: var(--color-black);
+  color: var(--color-white);
+  padding: 12px 20px;
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .hero-section,
+  .hero-inner {
+    min-height: 80vh;
+  }
+
+  .hero-inner {
+    padding-top: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .hero-shell {
+    align-items: center;
+    max-width: 100%;
+    margin-top: 0;
+  }
+
+  .hero-bg-text {
+    display: none;
+  }
+
+  .hero-search {
+    width: 100%;
+    flex-direction: column;
+    background: transparent;
+    gap: 10px;
+  }
+
+  .hero-search input {
+    width: 100%;
+    border-radius: 999px;
+    background: rgba(248, 248, 236, 0.94);
+  }
+
+  .hero-search button {
+    width: 100%;
+    border-radius: 999px;
+  }
+}

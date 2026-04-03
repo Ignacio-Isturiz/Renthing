@@ -3,6 +3,15 @@ import type { ReactNode } from "react";
 import { Nunito_Sans } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
+import "./components/layout/Header.css";
+import "./components/layout/Footer.css";
+import "./components/sections/Hero.css";
+import "./components/sections/Catalog.css";
+import "./components/sections/Recommendations.css";
+import "./components/sections/AboutUs.css";
+import "./components/sections/FAQ.css";
+import "./components/ui/Pagination.css";
+import "./components/auth/AuthModal.css";
 
 const nunito = Nunito_Sans({
   subsets: ["latin"],

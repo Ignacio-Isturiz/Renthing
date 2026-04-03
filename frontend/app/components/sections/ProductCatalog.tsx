@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import Pagination from "./Pagination";
+import Pagination from "../ui";
 
 type Category = {
   id: string;
