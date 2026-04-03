@@ -1,8 +1,9 @@
 import NextAuth from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
@@ -85,17 +86,17 @@ export const authOptions = {
     error: "/login",
   },
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.email = user.email;
+        token.sub = String(user.id ?? token.sub ?? "");
+        token.email = user.email ?? token.email;
       }
       return token;
     },
-    async session({ session, token }: any) {
+    async session({ session, token }) {
       if (session?.user) {
-        session.user.id = token.id;
-        session.user.email = token.email;
+        (session.user as { id?: string }).id = token.sub ?? "";
+        session.user.email = typeof token.email === "string" ? token.email : session.user.email;
       }
       return session;
     },

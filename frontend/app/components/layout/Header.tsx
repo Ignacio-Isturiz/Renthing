@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import AuthModal from "../auth";
@@ -38,10 +39,13 @@ export default function Header() {
                   className="header-profile"
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
                 >
-                  <img
+                  <Image
                     src={session?.user?.image || "/images/default-avatar.jpg"}
                     alt="Perfil de usuario"
                     className="header-avatar"
+                    width={40}
+                    height={40}
+                    unoptimized
                   />
                 </div>
 

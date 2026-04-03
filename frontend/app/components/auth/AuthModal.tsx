@@ -54,7 +54,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setError("");
     try {
       await signIn("google", { callbackUrl: "/" });
-    } catch (error) {
+    } catch {
       setError("Error inesperado. Intenta de nuevo.");
       setGoogleLoading(false);
     }
@@ -81,7 +81,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         onClose();
         router.refresh();
       }
-    } catch (err) {
+    } catch {
       setError("Error de conexión. Intenta de nuevo.");
       setLoading(false);
     }
@@ -129,7 +129,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       setRegisterPassword("");
       setRegisterPasswordConfirm("");
       setLoading(false);
-    } catch (err) {
+    } catch {
       setError("Error de conexión.");
       setLoading(false);
     }
@@ -152,7 +152,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       } else {
         setError("Código inválido o expirado.");
       }
-    } catch (err) {
+    } catch {
       setError("Error de red.");
     } finally {
       setLoading(false);
@@ -175,7 +175,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       } else {
         setError("No encontramos esa cuenta.");
       }
-    } catch (err) {
+    } catch {
       setError("Error de conexión.");
     } finally {
       setLoading(false);
@@ -204,7 +204,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       } else {
         setError("Error al actualizar la contraseña.");
       }
-    } catch (err) {
+    } catch {
       setError("Error de conexión.");
     } finally {
       setLoading(false);
