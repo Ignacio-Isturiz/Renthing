@@ -104,7 +104,11 @@ def verify_email(request):
     Endpoint que recibe el email y el código escrito por el usuario en el modal.
     """
     email = request.data.get('email')
-    code = request.data.get('token') # 'token' es el nombre que enviamos desde el modal
+    # Compatibilidad: frontend nuevo envia 'code', versiones anteriores enviaban 'token'.
+    code = request.data.get('code') or request.data.get('token')
+
+    if not email or not code:
+        return Response({"error": "Email y código son requeridos."}, status=status.HTTP_400_BAD_REQUEST)
 
     user = User.objects.filter(email=email).first()
     

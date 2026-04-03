@@ -15,7 +15,7 @@ export const verifyEmail = (email: string, code: string) =>
   api("/api/auth/verify-email/", { email, code });
 
 export const requestPasswordReset = (email: string) =>
-  api("/api/auth/password-reset-request/", { email });
+  api("/api/auth/password-reset/", { email });
 
 export const confirmPasswordReset = (
   email: string,
