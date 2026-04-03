@@ -138,12 +138,18 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const handleVerifyRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccessMsg("");
     setLoading(true);
+    const normalizedCode = verifyCode.trim();
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-email/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: registerEmail.trim().toLowerCase(), code: verifyCode.trim() }),
+        body: JSON.stringify({
+          email: registerEmail.trim().toLowerCase(),
+          code: normalizedCode,
+          token: normalizedCode,
+        }),
       });
       if (res.ok) {
         setActiveTab("login");
