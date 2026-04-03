@@ -1,5 +1,6 @@
 import uuid
 import random
+import logging
 from datetime import timedelta
 from django.utils import timezone
 from django.core.mail import send_mail
@@ -15,6 +16,8 @@ from rest_framework.permissions import AllowAny
 
 from .serializers import RegisterSerializer, UserSerializer
 from .models import UserProfile, PasswordResetCode
+
+logger = logging.getLogger(__name__)
 
 # --- VISTAS DE AUTENTICACIÓN Y REGISTRO ---
 
@@ -63,7 +66,14 @@ class RegisterView(generics.CreateAPIView):
         profile.save()
 
         # 4. Enviar Email con el código
-        self.send_verification_email(user.email, verification_code)
+        try:
+            self.send_verification_email(user.email, verification_code)
+        except Exception:
+            logger.exception("Error enviando correo de verificacion para %s", user.email)
+            return Response(
+                {"error": "No se pudo enviar el correo de verificación. Intenta de nuevo en unos minutos."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         return Response({
             "message": "Código de verificación enviado. Revisa tu correo."
