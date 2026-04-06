@@ -9,6 +9,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     cedula = models.CharField(max_length=50, blank=True, null=True)
     google_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    profile_image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
     picture = models.URLField(blank=True, null=True)
     verification_token = models.CharField(max_length=100, blank=True, null=True)
     failed_verification_attempts = models.IntegerField(default=0)
@@ -36,3 +37,62 @@ class PasswordResetCode(models.Model):
     @staticmethod
     def generate_code():
         return str(random.randint(100000, 999999))
+
+
+class Product(models.Model):
+    STATUS_AVAILABLE = "available"
+    STATUS_RENTED = "rented"
+    STATUS_CHOICES = [
+        (STATUS_AVAILABLE, "Disponible"),
+        (STATUS_RENTED, "Alquilado"),
+    ]
+
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="products")
+    title = models.CharField(max_length=120)
+    category = models.CharField(max_length=80, blank=True)
+    image_url = models.URLField(blank=True, null=True)
+    daily_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_AVAILABLE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.owner.email})"
+
+
+class RentalRequest(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_ACCEPTED = "accepted"
+    STATUS_REJECTED = "rejected"
+    STATUS_COMPLETED = "completed"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pendiente"),
+        (STATUS_ACCEPTED, "Aceptada"),
+        (STATUS_REJECTED, "Rechazada"),
+        (STATUS_COMPLETED, "Completada"),
+    ]
+
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="rental_requests")
+    renter = models.ForeignKey(User, on_delete=models.CASCADE, related_name="rental_requests")
+    start_date = models.DateField()
+    end_date = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    rating_by_renter = models.DecimalField(max_digits=2, decimal_places=1, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.product.title} -> {self.renter.email} ({self.status})"
+
+
+class Earning(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="earnings")
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True)
+    rental_request = models.ForeignKey(RentalRequest, on_delete=models.SET_NULL, null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    earned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-earned_at"]
+
+    def __str__(self):
+        return f"{self.owner.email}: {self.amount}"

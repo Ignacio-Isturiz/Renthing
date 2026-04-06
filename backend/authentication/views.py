@@ -2,6 +2,7 @@ import uuid
 import random
 import logging
 from datetime import timedelta
+from django.db.models import Avg, Sum
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
@@ -9,13 +10,20 @@ from django.contrib.auth.models import User
 
 from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 
-from .serializers import RegisterSerializer, UserSerializer
-from .models import UserProfile, PasswordResetCode
+from .serializers import (
+    RegisterSerializer,
+    UserSerializer,
+    ProductSerializer,
+    RentalRequestSerializer,
+    EarningSerializer,
+)
+from .models import UserProfile, PasswordResetCode, Product, RentalRequest, Earning
 
 logger = logging.getLogger(__name__)
 
@@ -142,12 +150,19 @@ def verify_email(request):
 class LoginView(ObtainAuthToken):
     """
     Login estándar que valida si el usuario está activo (verificado).
+    Garantiza que devuelve siempre un ID válido.
     """
     permission_classes = (AllowAny,)
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
+        
+        if not serializer.is_valid():
+            return Response(
+                {"error": "Credenciales inválidas."}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
         user = serializer.validated_data['user']
         
         if not user.is_active:
@@ -155,20 +170,34 @@ class LoginView(ObtainAuthToken):
                 {"error": "Debes confirmar tu correo electrónico antes de iniciar sesión."}, 
                 status=status.HTTP_403_FORBIDDEN
             )
+        
+        # Validar que el usuario tenga un ID válido
+        if not user.pk or not isinstance(user.pk, int):
+            logger.error(f"Usuario {user.email} tiene un ID inválido: {user.pk}")
+            return Response(
+                {"error": "Error interno del servidor. Contacta al soporte."}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
             
         token, created = Token.objects.get_or_create(user=user)
+        
         return Response({
             'token': token.key,
-            'user_id': user.pk,
+            'user_id': user.pk,  # ID del usuario (entero)
+            'id': user.pk,  # También enviar como 'id' para compatibilidad con NextAuth
             'email': user.email,
             'user': UserSerializer(user).data
-        })
+        }, status=status.HTTP_200_OK)
 
 # --- GOOGLE SIGN IN ---
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def google_sign_in(request):
+    """
+    Maneja el registro/login automático mediante Google OAuth.
+    Garantiza que devuelve un ID válido.
+    """
     email = request.data.get('email')
     first_name = request.data.get('first_name', '')
     last_name = request.data.get('last_name', '')
@@ -176,37 +205,56 @@ def google_sign_in(request):
     picture = request.data.get('picture')
     
     if not email or not google_id:
-        return Response({"error": "Email y google_id son requeridos"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "Email y google_id son requeridos"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
     
-    user, created = User.objects.get_or_create(
-        email=email,
-        defaults={
-            'username': email,
-            'first_name': first_name,
-            'last_name': last_name,
-            'is_active': True 
-        }
-    )
+    try:
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                'username': email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'is_active': True 
+            }
+        )
+        
+        if not created:
+            user.first_name = first_name
+            user.last_name = last_name
+            user.save()
+        
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.google_id = google_id
+        if picture:
+            profile.picture = picture
+        profile.save()
+        
+        token, _ = Token.objects.get_or_create(user=user)
+        
+        # Validar que el usuario tenga un ID válido
+        if not user.pk or not isinstance(user.pk, int):
+            logger.error(f"Usuario {user.email} tiene un ID inválido: {user.pk}")
+            return Response(
+                {"error": "Error interno del servidor. Contacta al soporte."}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        return Response({
+            'id': user.pk,  # ID del usuario (entero)
+            'email': user.email,
+            'token': token.key,
+            'user': UserSerializer(user).data
+        }, status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED)
     
-    if not created:
-        user.first_name = first_name
-        user.last_name = last_name
-        user.save()
-    
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-    profile.google_id = google_id
-    if picture:
-        profile.picture = picture
-    profile.save()
-    
-    token, _ = Token.objects.get_or_create(user=user)
-    
-    return Response({
-        'id': user.id,
-        'email': user.email,
-        'token': token.key,
-        'user': UserSerializer(user).data
-    }, status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED)
+    except Exception as e:
+        logger.error(f"Error en google_sign_in: {str(e)}")
+        return Response(
+            {"error": "Error al procesar la solicitud de Google. Intenta de nuevo."}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 # --- RECUPERACIÓN DE CONTRASEÑA ---
@@ -258,3 +306,117 @@ def reset_password_confirm(request):
         return Response({"message": "Contraseña actualizada con éxito"}, status=status.HTTP_200_OK)
     
     return Response({"error": "Código inválido o expirado"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# --- VISTAS PROTEGIDAS ---
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_profile(request):
+    """
+    Obtiene el perfil del usuario autenticado.
+    Requiere autenticación (TOKEN).
+    """
+    try:
+        user = request.user
+        
+        if not user.is_authenticated:
+            return Response(
+                {"error": "Autenticación requerida."}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        return Response({
+            'id': user.pk,
+            'email': user.email,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_active': user.is_active,
+            'user': UserSerializer(user).data
+        }, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        logger.error(f"Error obteniendo perfil del usuario: {str(e)}")
+        return Response(
+            {"error": "Error al obtener el perfil."}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_overview(request):
+    """
+    Devuelve datos dinámicos para la dashboard del usuario autenticado.
+    """
+    user = request.user
+
+    products_qs = Product.objects.filter(owner=user).order_by('-created_at')
+    pending_qs = RentalRequest.objects.filter(
+        product__owner=user,
+        status=RentalRequest.STATUS_PENDING,
+    ).select_related('product', 'renter').order_by('-created_at')
+    active_qs = RentalRequest.objects.filter(
+        product__owner=user,
+        status=RentalRequest.STATUS_ACCEPTED,
+    ).select_related('product', 'renter').order_by('-start_date')
+    earnings_qs = Earning.objects.filter(owner=user).select_related('product').order_by('-earned_at')
+
+    now = timezone.now()
+    month_earnings = earnings_qs.filter(
+        earned_at__year=now.year,
+        earned_at__month=now.month,
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    rating_avg = active_qs.aggregate(avg=Avg('rating_by_renter'))['avg']
+    rented_count = products_qs.filter(status=Product.STATUS_RENTED).count()
+
+    payload = {
+        'user': {
+            'id': user.id,
+            'name': f"{user.first_name} {user.last_name}".strip() or user.username,
+            'email': user.email,
+        },
+        'summary': {
+            'products_count': products_qs.count(),
+            'rented_count': rented_count,
+            'pending_requests': pending_qs.count(),
+            'rating': round(float(rating_avg or 0), 1),
+            'monthly_earnings': float(month_earnings),
+        },
+        'pending_requests': RentalRequestSerializer(pending_qs[:5], many=True).data,
+        'active_rentals': RentalRequestSerializer(active_qs[:6], many=True).data,
+        'products': ProductSerializer(products_qs[:12], many=True).data,
+        'recent_earnings': EarningSerializer(earnings_qs[:8], many=True).data,
+    }
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
+def update_profile_picture(request):
+    """
+    Actualiza la foto de perfil del usuario autenticado.
+    Espera un archivo en el campo multipart `image`.
+    """
+    image = request.FILES.get('image')
+    if not image:
+        return Response(
+            {'error': 'Debes enviar una imagen en el campo `image`.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not image.content_type or not image.content_type.startswith('image/'):
+        return Response(
+            {'error': 'El archivo enviado no es una imagen válida.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile.profile_image = image
+    profile.save(update_fields=['profile_image'])
+
+    picture_url = request.build_absolute_uri(profile.profile_image.url)
+    return Response({'picture_url': picture_url}, status=status.HTTP_200_OK)

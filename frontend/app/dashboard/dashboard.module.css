@@ -1,0 +1,634 @@
+.page {
+  min-height: calc(100vh - 90px);
+  padding: 24px 16px 40px;
+}
+
+.shell {
+  width: min(1220px, 100%);
+  margin: 0 auto;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: rgba(248, 248, 236, 0.9);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.topbar {
+  border-bottom: 1px solid var(--color-border);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-blue-dark);
+}
+
+.topbarRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profileMenuWrap {
+  position: relative;
+}
+
+.topSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 4px;
+}
+
+.topSwitchBtn {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-soft);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.topSwitchBtnActive {
+  background: rgba(10, 84, 131, 0.1);
+  color: var(--color-blue-dark);
+}
+
+.iconBtn,
+.avatarBtn,
+.iconBtnOutline {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-soft);
+}
+
+.avatarBtn {
+  border-radius: 999px;
+  font-weight: 800;
+  color: var(--color-blue-dark);
+  overflow: hidden;
+  padding: 0;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chevron {
+  color: var(--color-text-soft);
+}
+
+.profileDropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 180px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(2, 65, 109, 0.12);
+  padding: 6px;
+  z-index: 20;
+}
+
+.profileDropdownItem {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--color-blue-dark);
+  text-align: left;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+  display: block;
+}
+
+.profileDropdownItem:hover {
+  background: rgba(174, 221, 43, 0.18);
+}
+
+.content {
+  padding: 18px 16px 24px;
+}
+
+.pageHead h1,
+.rentalsHead h1 {
+  font-size: clamp(1.7rem, 2.8vw, 2.7rem);
+  color: var(--color-blue-dark);
+  letter-spacing: -0.02em;
+}
+
+.pageHead p {
+  margin-top: 6px;
+  font-size: 2rem;
+  color: var(--color-blue-dark);
+}
+
+.pageHead p strong {
+  font-weight: 900;
+}
+
+.summaryGrid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-soft);
+  font-size: 0.92rem;
+}
+
+.cardValue {
+  margin-top: 8px;
+  color: var(--color-blue-dark);
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+
+.exploreGrid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 12px;
+}
+
+.panel,
+.panelLarge,
+.earningsPanel {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.panelHeader h2 {
+  color: var(--color-blue-dark);
+}
+
+.publishInline {
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-weight: 800;
+  background: var(--color-lime);
+  color: #27410b;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.listStack {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.requestCard {
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.requestMain,
+.productCompactMain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar,
+.productIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(10, 84, 131, 0.1);
+  color: var(--color-blue-dark);
+  display: grid;
+  place-items: center;
+}
+
+.itemName {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--color-blue-dark);
+}
+
+.itemMeta,
+.muted {
+  color: var(--color-text-soft);
+}
+
+.rowActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btnSuccess,
+.btnGhost,
+.btnPrimaryWide {
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnSuccess {
+  border: 0;
+  background: #2f8b61;
+  color: #fff;
+}
+
+.btnGhost {
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-blue-dark);
+}
+
+.btnPrimaryWide {
+  margin-top: 12px;
+  border: 0;
+  background: var(--color-blue);
+  color: #fff;
+}
+
+.badgeAvailable,
+.badgeRented,
+.countPill,
+.badgeTab span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.77rem;
+  font-weight: 800;
+  padding: 4px 8px;
+}
+
+.badgeAvailable {
+  background: rgba(174, 221, 43, 0.22);
+  color: #557a0f;
+}
+
+.badgeRented {
+  background: rgba(10, 84, 131, 0.14);
+  color: var(--color-blue-dark);
+}
+
+.earningsMini {
+  margin-top: 12px;
+}
+
+.earningsMini h3,
+.sectionTitle {
+  color: var(--color-blue-dark);
+  margin-bottom: 8px;
+}
+
+.earningsMiniRows,
+.tableBlock {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.earnRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.earnRow:first-child {
+  border-top: 0;
+}
+
+.linkBtn {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-soft);
+  font-weight: 700;
+}
+
+.productCompact {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.rentalsHead {
+  margin-bottom: 10px;
+}
+
+.rentalsTabs {
+  margin-top: 10px;
+  display: flex;
+  gap: 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rentalsTab {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-soft);
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 8px 0 10px;
+  border-bottom: 3px solid transparent;
+}
+
+.rentalsTabActive {
+  color: var(--color-blue-dark);
+  border-bottom-color: var(--color-lime);
+}
+
+.countPill,
+.badgeTab span {
+  margin-left: 6px;
+  background: var(--color-blue);
+  color: #fff;
+  min-width: 22px;
+}
+
+.toolbar {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.toolbarControls,
+.filtersInline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badgeTab {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-weight: 700;
+  color: var(--color-blue-dark);
+  background: #fff;
+}
+
+.selectLike,
+.searchLike {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  color: var(--color-text-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.searchLike input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  min-width: 140px;
+}
+
+.panelLarge {
+  margin-top: 10px;
+}
+
+.splitGrid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.activeCard {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.productsHeaderActions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.productsGrid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.productCardLarge {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+}
+
+.productVisual {
+  height: 120px;
+  border-radius: 10px;
+  background: rgba(10, 84, 131, 0.07);
+  display: grid;
+  place-items: center;
+  color: var(--color-blue-dark);
+}
+
+.productTitle {
+  margin-top: 10px;
+  color: var(--color-blue-dark);
+  font-size: 1.2rem;
+}
+
+.productMetaRow {
+  margin: 10px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--color-text-soft);
+}
+
+.productMetaRow span {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.earningsPanel {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1.05fr 1.2fr;
+  gap: 12px;
+}
+
+.chartBlock {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.earningsMain {
+  color: var(--color-blue-dark);
+  font-size: 2.1rem;
+  font-weight: 900;
+}
+
+.chartLines {
+  margin-top: 14px;
+  height: 130px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.chartPoint {
+  height: 100%;
+  display: flex;
+  align-items: end;
+}
+
+.chartBar {
+  width: 100%;
+  border-radius: 10px 10px 4px 4px;
+  background: linear-gradient(180deg, #6dc6e2 0%, var(--color-blue) 100%);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 8px;
+  border-bottom: 1px solid #e8efdd;
+  text-align: left;
+}
+
+.table th {
+  color: var(--color-text-soft);
+  font-size: 0.86rem;
+}
+
+@media (max-width: 1050px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .exploreGrid,
+  .productsGrid,
+  .earningsPanel,
+  .splitGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 780px) {
+  .page {
+    padding: 14px 8px 26px;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topbarRight {
+    justify-content: space-between;
+  }
+
+  .topSwitch {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .topSwitchBtn {
+    flex: 1;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rentalsTabs {
+    gap: 10px;
+    overflow-x: auto;
+  }
+
+  .toolbar {
+    align-items: stretch;
+  }
+
+  .toolbarControls {
+    width: 100%;
+  }
+
+  .searchLike,
+  .selectLike {
+    flex: 1;
+    justify-content: space-between;
+  }
+
+  .searchLike input {
+    min-width: 0;
+    width: 100%;
+  }
+}

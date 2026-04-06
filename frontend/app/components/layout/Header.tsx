@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
+import { Home, LayoutGrid, LogOut } from "lucide-react";
 import AuthModal from "../auth";
 
+const DEFAULT_PROFILE_IMAGE_PATH = "/images/default-profile-user.png";
+
 export default function Header() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isLoggedIn = status === "authenticated";
 
@@ -17,6 +22,53 @@ export default function Header() {
     await signOut({ redirect: false });
     setIsMenuOpen(false);
     window.location.reload();
+  };
+
+  const handleAvatarFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile) {
+      return;
+    }
+
+    const backendToken = session?.user?.backendToken;
+    if (!backendToken) {
+      console.error("No hay token de backend para subir la imagen");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setIsUploadingImage(true);
+      const formData = new FormData();
+      formData.append("image", selectedFile);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile/picture/`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Token ${backendToken}`,
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "No se pudo actualizar la foto de perfil.");
+      }
+
+      if (data?.picture_url) {
+        await update({ image: data.picture_url });
+      }
+    } catch (error) {
+      console.error("Error subiendo foto de perfil:", error);
+    } finally {
+      setIsUploadingImage(false);
+      event.target.value = "";
+    }
   };
 
   return (
@@ -35,32 +87,82 @@ export default function Header() {
           <div className="header-actions">
             {isLoggedIn ? (
               <div className="header-profile-container">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarFileChange}
+                  className="header-hidden-file-input"
+                />
+
                 <div
                   className="header-profile"
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  title="Abrir menú de perfil"
                 >
                   <Image
-                    src={session?.user?.image || "/images/default-avatar.jpg"}
+                    src={session?.user?.image || DEFAULT_PROFILE_IMAGE_PATH}
                     alt="Perfil de usuario"
                     className="header-avatar"
                     width={40}
                     height={40}
                     unoptimized
                   />
+                  {isUploadingImage && <span className="header-profile-loading">...</span>}
                 </div>
 
                 {isMenuOpen && (
                   <div className="header-dropdown">
+                    <div className="header-dropdown-user">
+                      <button
+                        type="button"
+                        className="header-dropdown-user-avatar"
+                        title="Haz clic para cambiar tu foto"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Image
+                          src={session?.user?.image || DEFAULT_PROFILE_IMAGE_PATH}
+                          alt="Perfil"
+                          width={34}
+                          height={34}
+                          unoptimized
+                        />
+                      </button>
+                      <div className="header-dropdown-user-meta">
+                        <p className="header-dropdown-user-name">
+                          {session?.user?.name || "Usuario"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="header-dropdown-divider" />
+
+                    <Link
+                      href={session?.user ? "/dashboard" : "/"}
+                      className="header-dropdown-item"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <LayoutGrid size={16} />
+                      Alquilar
+                    </Link>
+
+                    <Link
+                      href="/"
+                      className="header-dropdown-item"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Home size={16} />
+                      Pagina principal
+                    </Link>
+
+                    <div className="header-dropdown-divider" />
+
                     <button
                       type="button"
                       className="header-dropdown-item logout-btn"
                       onClick={handleLogout}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "8px" }}>
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
-                      </svg>
+                      <LogOut size={16} />
                       Cerrar sesión
                     </button>
                   </div>
