@@ -78,7 +78,7 @@ export default function DashboardPage() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const profileImageInputRef = useRef<HTMLInputElement>(null);
 
-  const backendToken = String((session?.user as any)?.backendToken || "");
+  const backendToken = String(session?.user?.backendToken || "");
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -127,10 +127,19 @@ export default function DashboardPage() {
     );
   }, [dashboardData, session?.user?.name]);
 
-  const products = dashboardData?.products ?? [];
-  const pendingRequests = dashboardData?.pending_requests ?? [];
-  const activeRentals = dashboardData?.active_rentals ?? [];
-  const recentEarnings = dashboardData?.recent_earnings ?? [];
+  const products = useMemo(() => dashboardData?.products ?? [], [dashboardData]);
+  const pendingRequests = useMemo(
+    () => dashboardData?.pending_requests ?? [],
+    [dashboardData]
+  );
+  const activeRentals = useMemo(
+    () => dashboardData?.active_rentals ?? [],
+    [dashboardData]
+  );
+  const recentEarnings = useMemo(
+    () => dashboardData?.recent_earnings ?? [],
+    [dashboardData]
+  );
 
   const filteredProducts = useMemo(() => {
     const q = searchValue.trim().toLowerCase();

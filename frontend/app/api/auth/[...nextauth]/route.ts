@@ -123,7 +123,7 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.name = user.name;
         token.image = user.image || token.image;
-        token.backendToken = (user as any).backendToken || "";
+        token.backendToken = user.backendToken || "";
       }
 
       if (trigger === "update" && session?.image) {
@@ -141,11 +141,11 @@ export const authOptions: NextAuthOptions = {
         } else {
           console.log("✅ Session callback: ID disponible", { tokenId });
         }
-        (session.user as any).id = tokenId;
-        (session.user as any).email = token.email;
-        (session.user as any).name = token.name;
-        (session.user as any).image = token.image || "";
-        (session.user as any).backendToken = token.backendToken || "";
+        session.user.id = tokenId;
+        session.user.email = token.email || undefined;
+        session.user.name = token.name || undefined;
+        session.user.image = token.image || "";
+        session.user.backendToken = token.backendToken || "";
       }
       return session;
     },

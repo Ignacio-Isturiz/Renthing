@@ -39,7 +39,7 @@ export function withAuth<P extends object>(
       }
 
       // Validar que tenga un ID válido
-      const userId = (session?.user as any)?.id;
+      const userId = session?.user?.id;
       if (!userId || userId === "undefined") {
         console.error("Usuario autenticado pero sin ID válido");
         redirect("/");

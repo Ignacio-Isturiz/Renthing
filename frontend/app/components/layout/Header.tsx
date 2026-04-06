@@ -32,7 +32,7 @@ export default function Header() {
       return;
     }
 
-    const backendToken = (session?.user as any)?.backendToken;
+    const backendToken = session?.user?.backendToken;
     if (!backendToken) {
       console.error("No hay token de backend para subir la imagen");
       event.target.value = "";
