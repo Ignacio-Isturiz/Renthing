@@ -26,20 +26,25 @@ export const authOptions: NextAuthOptions = {
             }
           );
           const data = await res.json();
+          
+          // Garantizar que el ID siempre sea un string válido
+          const userId = String(data.id || profile.sub || "");
+          
+          if (!userId) {
+            console.error("No se pudo obtener ID del usuario en Google signin");
+            throw new Error("Invalid user ID");
+          }
+
           return {
-            id: String(data.id || profile.sub),
+            id: userId,
             email: profile.email || "",
             name: profile.name || "",
             image: profile.picture,
+            backendToken: data.token || "",
           };
         } catch (error) {
           console.error("Error en Google signin:", error);
-          return {
-            id: profile.sub,
-            email: profile.email || "",
-            name: profile.name || "",
-            image: profile.picture,
-          };
+          throw error;
         }
       },
     }),
@@ -65,14 +70,33 @@ export const authOptions: NextAuthOptions = {
               }),
             }
           );
+          
           const data = await res.json();
+
           if (!res.ok) {
+            console.error("Login failed:", data);
             return null;
           }
+
+          // Garantizar que el ID siempre sea un string válido
+          const userId = String(data.user_id || data.id || "");
+          
+          if (!userId) {
+            console.error("No se pudo obtener ID del usuario en login");
+            return null;
+          }
+
+          const firstName = String(data.user?.first_name || "").trim();
+          const lastName = String(data.user?.last_name || "").trim();
+          const fullName = `${firstName} ${lastName}`.trim();
+
+          // Retornamos el objeto usuario con el ID que viene de Django
           return {
-            id: String(data.user_id || data.id || ""),
+            id: userId,
             email: data.email || credentials.email,
-            name: data.user?.first_name || "",
+            name: fullName || data.name || firstName || "Usuario",
+            image: data.user?.picture || "",
+            backendToken: data.token || "",
           };
         } catch (error) {
           console.error("Error en login:", error);
@@ -82,28 +106,53 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   pages: {
-    signIn: "/login",
-    error: "/login",
+    signIn: "/",
+    error: "/",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // Si es el primer login, guardar el ID en el token
       if (user) {
-        token.sub = String(user.id ?? token.sub ?? "");
-        token.email = user.email ?? token.email;
+        const userId = String(user.id);
+        if (!userId || userId === "undefined") {
+          console.error("❌ ERROR: user.id es inválido", { user, userId });
+          return token;
+        }
+        console.log("✅ JWT callback: Guardando ID en token", { userId });
+        token.id = userId;
+        token.email = user.email;
+        token.name = user.name;
+        token.image = user.image || token.image;
+        token.backendToken = (user as any).backendToken || "";
       }
+
+      if (trigger === "update" && session?.image) {
+        token.image = session.image;
+      }
+
       return token;
     },
     async session({ session, token }) {
+      // Pasar el ID y email del token a la sesión del cliente
       if (session?.user) {
-        (session.user as { id?: string }).id = token.sub ?? "";
-        session.user.email = typeof token.email === "string" ? token.email : session.user.email;
+        const tokenId = String(token.id || "");
+        if (!tokenId || tokenId === "undefined") {
+          console.error("❌ ERROR: token.id no está disponible", { token, session });
+        } else {
+          console.log("✅ Session callback: ID disponible", { tokenId });
+        }
+        (session.user as any).id = tokenId;
+        (session.user as any).email = token.email;
+        (session.user as any).name = token.name;
+        (session.user as any).image = token.image || "";
+        (session.user as any).backendToken = token.backendToken || "";
       }
       return session;
     },
   },
   session: {
-    strategy: "jwt" as const,
-    maxAge: 30 * 24 * 60 * 60,
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 días
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
