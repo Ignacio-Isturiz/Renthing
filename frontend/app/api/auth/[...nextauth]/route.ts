@@ -111,6 +111,11 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, trigger, session }) {
+      const normalizeImage = (value: unknown): string => {
+        if (typeof value !== "string") return "";
+        return value.startsWith("data:image/") ? "" : value;
+      };
+
       // Si es el primer login, guardar el ID en el token
       if (user) {
         const userId = String(user.id);
@@ -122,12 +127,12 @@ export const authOptions: NextAuthOptions = {
         token.id = userId;
         token.email = user.email;
         token.name = user.name;
-        token.image = user.image || token.image;
+        token.image = normalizeImage(user.image) || token.image;
         token.backendToken = user.backendToken || "";
       }
 
       if (trigger === "update" && session?.image) {
-        token.image = session.image;
+        token.image = normalizeImage(session.image);
       }
 
       return token;

@@ -17,7 +17,7 @@ class PasswordResetCodeAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-	list_display = ("title", "owner", "status", "daily_price", "created_at")
+	list_display = ("title", "owner", "latitude", "longitude", "status", "daily_price", "created_at")
 	search_fields = ("title", "owner__email", "category")
 	list_filter = ("status", "category")
 

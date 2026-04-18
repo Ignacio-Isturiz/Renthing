@@ -24,6 +24,7 @@ export interface DashboardRentalRequest {
 export interface DashboardProduct {
   id: number;
   title: string;
+  description: string;
   category: string;
   image_url: string;
   daily_price: string;

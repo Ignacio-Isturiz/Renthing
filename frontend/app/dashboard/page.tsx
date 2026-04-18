@@ -26,6 +26,10 @@ import {
   type DashboardProduct,
   type DashboardRentalRequest,
 } from "../../services/dashboard.api";
+import {
+  createProduct,
+  suggestProductCategory,
+} from "../../services/products.api";
 
 function formatCurrency(value: number | string): string {
   const amount = typeof value === "string" ? Number(value) : value;
@@ -60,6 +64,95 @@ function getProductIcon(name: string) {
   return Box;
 }
 
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        reject(new Error("No se pudo leer la imagen seleccionada."));
+        return;
+      }
+      resolve(reader.result);
+    };
+    reader.onerror = () => reject(new Error("No se pudo leer la imagen seleccionada."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function getCurrentBrowserLocation(): Promise<{ latitude: number; longitude: number }> {
+  if (typeof window === "undefined" || !navigator.geolocation) {
+    throw new Error("El navegador no soporta geolocalizacion.");
+  }
+
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      () => reject(new Error("No se pudo obtener tu ubicacion actual.")),
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+      }
+    );
+  });
+}
+
+async function reverseGeocodeLocation(latitude: number, longitude: number): Promise<{
+  country: string;
+  state: string;
+  city: string;
+}> {
+  const params = new URLSearchParams({
+    format: "jsonv2",
+    lat: String(latitude),
+    lon: String(longitude),
+    zoom: "14",
+    addressdetails: "1",
+  });
+
+  const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error("No se pudo resolver pais, estado y ciudad desde tu ubicacion.");
+  }
+
+  const payload: {
+    address?: {
+      country?: string;
+      state?: string;
+      state_district?: string;
+      region?: string;
+      city?: string;
+      city_district?: string;
+      town?: string;
+      village?: string;
+      hamlet?: string;
+      suburb?: string;
+      county?: string;
+      municipality?: string;
+    };
+  } = await response.json();
+
+  const address = payload.address ?? {};
+  return {
+    country: address.country ?? "",
+    state: address.state ?? address.state_district ?? address.region ?? address.county ?? "",
+    city:
+      address.city ??
+      address.town ??
+      address.village ??
+      address.municipality ??
+      address.city_district ??
+      address.suburb ??
+      address.hamlet ??
+      address.county ??
+      "",
+  };
+}
+
 type TopSection = "explorar" | "mis-alquileres";
 type RentalsTab = "solicitudes" | "productos" | "ganancias";
 const DEFAULT_PROFILE_IMAGE_PATH = "/images/default-profile-user.png";
@@ -74,11 +167,75 @@ export default function DashboardPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState("");
   const [searchValue, setSearchValue] = useState("");
+  const [showPublishForm, setShowPublishForm] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishError, setPublishError] = useState("");
+  const [publishSuccess, setPublishSuccess] = useState("");
+  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
+  const [isSuggestingCategory, setIsSuggestingCategory] = useState(false);
+  const [productForm, setProductForm] = useState({
+    title: "",
+    description: "",
+    category: "",
+    daily_price: "",
+    image_url: "",
+    latitude: "",
+    longitude: "",
+    country: "",
+    state: "",
+    city: "",
+    address: "",
+  });
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const profileImageInputRef = useRef<HTMLInputElement>(null);
 
   const backendToken = String(session?.user?.backendToken || "");
+
+  useEffect(() => {
+    let cancelled = false;
+    const title = productForm.title.trim();
+
+    if (!title) {
+      setIsSuggestingCategory(false);
+      setProductForm((current) =>
+        current.category ? { ...current, category: "" } : current
+      );
+      return;
+    }
+
+    setIsSuggestingCategory(true);
+
+    const timeoutId = window.setTimeout(() => {
+      void suggestProductCategory(title)
+        .then((suggestion) => {
+          if (cancelled) return;
+          setProductForm((current) =>
+            current.category === suggestion.label
+              ? current
+              : { ...current, category: suggestion.label }
+          );
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          console.error(
+            "No se pudo sugerir la categoria:",
+            error instanceof Error ? error.message : error
+          );
+          setProductForm((current) => ({ ...current, category: "" }));
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setIsSuggestingCategory(false);
+          }
+        });
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [productForm.title]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -215,7 +372,7 @@ export default function DashboardPage() {
     if (!selectedFile) return;
 
     if (!backendToken) {
-      console.error("No hay token de backend para subir imagen");
+      console.error("No hay token de backend para actualizar imagen");
       event.target.value = "";
       return;
     }
@@ -224,9 +381,10 @@ export default function DashboardPage() {
       setIsUploadingImage(true);
       const formData = new FormData();
       formData.append("image", selectedFile);
+      const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile/picture/`,
+        `${apiBaseUrl}/api/auth/profile/picture/`,
         {
           method: "PATCH",
           headers: {
@@ -236,19 +394,166 @@ export default function DashboardPage() {
         }
       );
 
-      const data = await response.json();
+      const rawResponse = await response.text();
+      let data: { error?: string; picture_url?: string } = {};
+
+      if (rawResponse) {
+        try {
+          data = JSON.parse(rawResponse) as { error?: string; picture_url?: string };
+        } catch {
+          if (!response.ok) {
+            throw new Error(
+              `Respuesta inesperada del servidor (${response.status}). Verifica NEXT_PUBLIC_API_URL y el backend.`
+            );
+          }
+        }
+      }
+
       if (!response.ok) {
-        throw new Error(data?.error || "No se pudo subir la imagen.");
+        throw new Error(data?.error || "No se pudo actualizar la foto.");
       }
 
       if (data?.picture_url) {
         await update({ image: data.picture_url });
       }
-    } catch (uploadError) {
-      console.error("Error subiendo imagen de perfil:", uploadError);
+    } catch (updateError) {
+      console.error("Error actualizando imagen de perfil:", updateError);
     } finally {
       setIsUploadingImage(false);
       event.target.value = "";
+    }
+  };
+
+  const handlePublishProduct = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPublishError("");
+    setPublishSuccess("");
+
+    if (!backendToken) {
+      setPublishError("No hay token de backend. Cierra sesión y vuelve a iniciar.");
+      return;
+    }
+
+    if (!productForm.title.trim() || !productForm.daily_price.trim()) {
+      setPublishError("Titulo y precio por dia son obligatorios.");
+      return;
+    }
+
+    if (!productForm.category.trim()) {
+      setPublishError("Espera a que el sistema asigne una categoria valida.");
+      return;
+    }
+
+    if (!productForm.latitude.trim() || !productForm.longitude.trim()) {
+      setPublishError("Debes usar tu ubicacion actual para completar pais, estado y ciudad.");
+      return;
+    }
+
+    if (!productForm.image_url.trim()) {
+      setPublishError("La imagen del producto es obligatoria.");
+      return;
+    }
+
+    try {
+      setIsPublishing(true);
+      const created = await createProduct(
+        {
+          title: productForm.title.trim(),
+          description: productForm.description.trim() || undefined,
+          category: productForm.category.trim(),
+          daily_price: productForm.daily_price.trim(),
+          image_url: productForm.image_url.trim(),
+          latitude: Number(productForm.latitude),
+          longitude: Number(productForm.longitude),
+          address:
+            productForm.address.trim() ||
+            [productForm.city, productForm.state, productForm.country]
+              .map((value) => value.trim())
+              .filter(Boolean)
+              .join(", ") ||
+            undefined,
+        },
+        backendToken
+      );
+
+      setDashboardData((previous) => {
+        if (!previous) return previous;
+
+        const createdProduct: DashboardProduct = {
+          id: created.id,
+          title: created.title,
+          description: created.description || "",
+          category: created.category,
+          image_url: created.image_url || "",
+          daily_price: created.daily_price,
+          status: created.status,
+          status_label: created.status_label,
+          created_at: created.created_at,
+        };
+
+        return {
+          ...previous,
+          summary: {
+            ...previous.summary,
+            products_count: previous.summary.products_count + 1,
+          },
+          products: [createdProduct, ...previous.products],
+        };
+      });
+
+      setPublishSuccess("Producto publicado correctamente.");
+      setProductForm((current) => ({
+        ...current,
+        title: "",
+        description: "",
+        category: "",
+        daily_price: "",
+        image_url: "",
+        latitude: "",
+        longitude: "",
+        country: "",
+        state: "",
+        city: "",
+        address: "",
+      }));
+      setShowPublishForm(false);
+    } catch (creationError) {
+      setPublishError(
+        creationError instanceof Error
+          ? creationError.message
+          : "No se pudo publicar el producto."
+      );
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleUseCurrentLocation = async () => {
+    setPublishError("");
+
+    try {
+      setIsResolvingLocation(true);
+      const coords = await getCurrentBrowserLocation();
+      const place = await reverseGeocodeLocation(coords.latitude, coords.longitude);
+      setProductForm((current) => ({
+        ...current,
+        latitude: coords.latitude.toFixed(6),
+        longitude: coords.longitude.toFixed(6),
+        country: place.country,
+        state: place.state,
+        city: place.city,
+        address:
+          current.address.trim() ||
+          [place.city, place.state, place.country].filter(Boolean).join(", "),
+      }));
+    } catch (locationError) {
+      setPublishError(
+        locationError instanceof Error
+          ? locationError.message
+          : "No se pudo obtener la ubicacion actual."
+      );
+    } finally {
+      setIsResolvingLocation(false);
     }
   };
 
@@ -401,9 +706,32 @@ export default function DashboardPage() {
                   <h2>Acciones rápidas</h2>
                 </div>
 
-                <button className={styles.publishInline}>
+                <button
+                  type="button"
+                  className={styles.publishInline}
+                  onClick={() => {
+                    setShowPublishForm((value) => !value);
+                    setPublishError("");
+                    setPublishSuccess("");
+                  }}
+                >
                   <Plus size={16} /> Publicar producto
                 </button>
+
+                {showPublishForm && (
+                  <PublishProductForm
+                    productForm={productForm}
+                    isPublishing={isPublishing}
+                    isResolvingLocation={isResolvingLocation}
+                    isSuggestingCategory={isSuggestingCategory}
+                    publishError={publishError}
+                    publishSuccess={publishSuccess}
+                    onChange={setProductForm}
+                    onSubmit={handlePublishProduct}
+                    onUseCurrentLocation={handleUseCurrentLocation}
+                    setPublishError={setPublishError}
+                  />
+                )}
 
                 <div className={styles.listStack}>
                   {pendingRequests.length === 0 ? (
@@ -448,7 +776,15 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                <button className={styles.btnPrimaryWide}>
+                <button
+                  type="button"
+                  className={styles.btnPrimaryWide}
+                  onClick={() => {
+                    setShowPublishForm(true);
+                    setPublishError("");
+                    setPublishSuccess("");
+                  }}
+                >
                   <Plus size={16} /> Publicar producto
                 </button>
               </div>
@@ -566,8 +902,33 @@ export default function DashboardPage() {
                 </section>
 
                 <div className={styles.productsHeaderActions}>
-                  <button className={styles.btnPrimaryWide}><Plus size={16} /> Publicar producto</button>
+                  <button
+                    type="button"
+                    className={styles.btnPrimaryWide}
+                    onClick={() => {
+                      setShowPublishForm((value) => !value);
+                      setPublishError("");
+                      setPublishSuccess("");
+                    }}
+                  >
+                    <Plus size={16} /> Publicar producto
+                  </button>
                 </div>
+
+                {showPublishForm && (
+                  <PublishProductForm
+                    productForm={productForm}
+                    isPublishing={isPublishing}
+                    isResolvingLocation={isResolvingLocation}
+                    isSuggestingCategory={isSuggestingCategory}
+                    publishError={publishError}
+                    publishSuccess={publishSuccess}
+                    onChange={setProductForm}
+                    onSubmit={handlePublishProduct}
+                    onUseCurrentLocation={handleUseCurrentLocation}
+                    setPublishError={setPublishError}
+                  />
+                )}
 
                 <section className={styles.productsGrid}>
                   {filteredProducts.length === 0 ? (
@@ -737,8 +1098,21 @@ function ProductCardLarge({ product }: { product: DashboardProduct }) {
 
   return (
     <article className={styles.productCardLarge}>
-      <div className={styles.productVisual}><Icon size={56} /></div>
+      <div className={styles.productVisual}>
+        {product.image_url ? (
+          <Image
+            src={product.image_url}
+            alt={product.title}
+            fill
+            className={styles.productVisualImage}
+            unoptimized
+          />
+        ) : (
+          <Icon size={56} />
+        )}
+      </div>
       <h3 className={styles.productTitle}>{product.title}</h3>
+      {product.description && <p className={styles.productDescription}>{product.description}</p>}
       <span className={isRented ? styles.badgeRented : styles.badgeAvailable}>{product.status_label}</span>
 
       <div className={styles.productMetaRow}>
@@ -751,5 +1125,265 @@ function ProductCardLarge({ product }: { product: DashboardProduct }) {
         <button type="button" className={styles.btnGhost}>Ver detalles <ChevronRight size={14} /></button>
       </div>
     </article>
+  );
+}
+
+function PublishProductForm({
+  productForm,
+  isPublishing,
+  isResolvingLocation,
+  isSuggestingCategory,
+  publishError,
+  publishSuccess,
+  onChange,
+  onSubmit,
+  onUseCurrentLocation,
+  setPublishError,
+}: {
+  productForm: {
+    title: string;
+    description: string;
+    category: string;
+    daily_price: string;
+    image_url: string;
+    latitude: string;
+    longitude: string;
+    country: string;
+    state: string;
+    city: string;
+    address: string;
+  };
+  isPublishing: boolean;
+  isResolvingLocation: boolean;
+  isSuggestingCategory: boolean;
+  publishError: string;
+  publishSuccess: string;
+  onChange: React.Dispatch<
+    React.SetStateAction<{
+      title: string;
+      description: string;
+      category: string;
+      daily_price: string;
+      image_url: string;
+      latitude: string;
+      longitude: string;
+      country: string;
+      state: string;
+      city: string;
+      address: string;
+    }>
+  >;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<void>;
+  onUseCurrentLocation: () => Promise<void>;
+  setPublishError: React.Dispatch<React.SetStateAction<string>>;
+}) {
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+
+  const handleFileSelection = async (selectedFile?: File | null) => {
+    if (!selectedFile) return;
+
+    if (!selectedFile.type.startsWith("image/")) {
+      setPublishError("Debes seleccionar una imagen valida.");
+      return;
+    }
+
+    try {
+      const dataUrl = await fileToDataUrl(selectedFile);
+      onChange((current) => ({ ...current, image_url: dataUrl }));
+      setPublishError("");
+    } catch (fileError) {
+      setPublishError(
+        fileError instanceof Error ? fileError.message : "No se pudo leer la imagen."
+      );
+    }
+  };
+
+  return (
+    <form className={styles.publishForm} onSubmit={onSubmit}>
+      <div className={styles.publishGrid}>
+        <label>
+          Titulo
+          <input
+            type="text"
+            value={productForm.title}
+            onChange={(event) =>
+              onChange((current) => ({ ...current, title: event.target.value }))
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Descripcion
+          <textarea
+            value={productForm.description}
+            onChange={(event) =>
+              onChange((current) => ({ ...current, description: event.target.value }))
+            }
+            rows={3}
+            placeholder="Describe el producto, su estado y lo que incluye"
+          />
+        </label>
+
+        <label>
+          Categoria asignada
+          <div className={styles.categoryPanel}>
+            <div className={styles.categoryTagWrap}>
+              {isSuggestingCategory ? (
+                <span className={styles.categoryTagMuted}>Analizando el titulo...</span>
+              ) : productForm.category ? (
+                <span className={styles.categoryTag}>{productForm.category}</span>
+              ) : (
+                <span className={styles.categoryTagMuted}>Primero coloca un titulo</span>
+              )}
+            </div>
+          </div>
+        </label>
+
+        <label>
+          Precio por dia
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={productForm.daily_price}
+            onChange={(event) =>
+              onChange((current) => ({ ...current, daily_price: event.target.value }))
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Pais
+          <input
+            type="text"
+            value={productForm.country}
+            onChange={(event) =>
+              onChange((current) => ({ ...current, country: event.target.value }))
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Estado / Departamento
+          <input
+            type="text"
+            value={productForm.state}
+            onChange={(event) =>
+              onChange((current) => ({ ...current, state: event.target.value }))
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Ciudad
+          <input
+            type="text"
+            value={productForm.city}
+            onChange={(event) =>
+              onChange((current) => ({ ...current, city: event.target.value }))
+            }
+            required
+          />
+        </label>
+
+        <label className={styles.publishFullRow}>
+          Direccion (opcional)
+          <input
+            type="text"
+            value={productForm.address}
+            onChange={(event) =>
+              onChange((current) => ({ ...current, address: event.target.value }))
+            }
+            placeholder="Ej: Calle 72 #10-34, Bogota"
+          />
+        </label>
+
+        <div className={styles.publishFullRow}>
+          <span className={styles.publishFieldLabel}>Imagen del producto</span>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            className={styles.hiddenFileInput}
+            onChange={(event) => {
+              void handleFileSelection(event.target.files?.[0]);
+              event.target.value = "";
+            }}
+          />
+          <div
+            className={`${styles.imageDropzone} ${isDraggingImage ? styles.imageDropzoneActive : ""} ${productForm.image_url ? styles.imageDropzoneFilled : ""}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => imageInputRef.current?.click()}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setIsDraggingImage(true);
+            }}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setIsDraggingImage(true);
+            }}
+            onDragLeave={() => setIsDraggingImage(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setIsDraggingImage(false);
+              void handleFileSelection(event.dataTransfer.files?.[0]);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                imageInputRef.current?.click();
+              }
+            }}
+          >
+            {productForm.image_url ? (
+              <div className={styles.imageDropzonePreview}>
+                <Image
+                  src={productForm.image_url}
+                  alt="Vista previa de la imagen del producto"
+                  width={96}
+                  height={96}
+                  className={styles.imageDropzonePreviewImage}
+                  unoptimized
+                />
+                <div>
+                  <strong>Imagen lista</strong>
+                  <p>Haz clic o arrastra otra foto para reemplazarla.</p>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.imageDropzoneText}>
+                <strong>Agrega o arrastra tus fotos aquí</strong>
+                <p>
+                  La imagen es obligatoria. Usa una foto limpia, sin bordes, logos ni marcas de agua.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {publishError && <p className={styles.publishError}>{publishError}</p>}
+      {publishSuccess && <p className={styles.publishSuccess}>{publishSuccess}</p>}
+
+      <div className={styles.rowActions}>
+        <button
+          type="button"
+          className={styles.btnGhost}
+          onClick={onUseCurrentLocation}
+          disabled={isResolvingLocation || isPublishing}
+        >
+          {isResolvingLocation ? "Obteniendo GPS..." : "Usar mi ubicacion actual"}
+        </button>
+        <button type="submit" className={styles.btnPrimaryWide} disabled={isPublishing}>
+          {isPublishing ? "Publicando..." : "Guardar producto"}
+        </button>
+      </div>
+    </form>
   );
 }
