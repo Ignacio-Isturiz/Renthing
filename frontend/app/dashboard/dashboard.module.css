@@ -468,6 +468,199 @@
   justify-content: flex-end;
 }
 
+.publishForm {
+  margin-top: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: #fdfef8;
+  padding: 12px;
+}
+
+.publishGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.publishGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--color-blue-dark);
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.publishGrid input {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  outline: 0;
+  background: #fff;
+}
+
+.publishGrid textarea {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  outline: 0;
+  background: #fff;
+  resize: vertical;
+  min-height: 88px;
+  font-family: inherit;
+}
+
+.publishGrid input:focus {
+  border-color: var(--color-blue);
+}
+
+.publishGrid textarea:focus {
+  border-color: var(--color-blue);
+}
+
+.categoryPanel {
+  border: 1px solid rgba(10, 84, 131, 0.12);
+  border-radius: 10px;
+  background: rgba(10, 84, 131, 0.04);
+  padding: 10px 12px;
+}
+
+.categoryTagWrap {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.categoryTag,
+.categoryTagMuted {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.categoryTag {
+  background: rgba(174, 221, 43, 0.2);
+  color: #4f6d13;
+}
+
+.categoryTagMuted {
+  background: rgba(10, 84, 131, 0.08);
+  color: var(--color-text-soft);
+}
+
+.categoryHelperText {
+  margin-top: 8px;
+  color: var(--color-text-soft);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.publishFieldLabel {
+  display: inline-flex;
+  margin-bottom: 6px;
+  color: var(--color-blue-dark);
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.hiddenFileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.imageDropzone {
+  border: 1.5px dashed rgba(10, 84, 131, 0.3);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(10, 84, 131, 0.04), rgba(174, 221, 43, 0.08));
+  min-height: 180px;
+  padding: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.imageDropzone:hover,
+.imageDropzoneActive {
+  border-color: var(--color-blue);
+  background: linear-gradient(180deg, rgba(10, 84, 131, 0.08), rgba(174, 221, 43, 0.14));
+  transform: translateY(-1px);
+}
+
+.imageDropzoneFilled {
+  background: #fff;
+}
+
+.imageDropzoneText {
+  max-width: 340px;
+  color: var(--color-blue-dark);
+}
+
+.imageDropzoneText strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.imageDropzoneText p {
+  margin-top: 6px;
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.imageDropzonePreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: left;
+}
+
+.imageDropzonePreviewImage {
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid rgba(10, 84, 131, 0.16);
+}
+
+.imageDropzonePreview strong {
+  display: block;
+  color: var(--color-blue-dark);
+}
+
+.imageDropzonePreview p {
+  margin-top: 4px;
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+}
+
+.publishFullRow {
+  grid-column: 1 / -1;
+}
+
+.publishError {
+  margin-top: 10px;
+  color: #b83232;
+  font-weight: 700;
+}
+
+.publishSuccess {
+  margin-top: 10px;
+  color: #2f8b61;
+  font-weight: 700;
+}
+
 .productsGrid {
   margin-top: 10px;
   display: grid;
@@ -489,12 +682,25 @@
   display: grid;
   place-items: center;
   color: var(--color-blue-dark);
+  position: relative;
+  overflow: hidden;
+}
+
+.productVisualImage {
+  object-fit: cover;
 }
 
 .productTitle {
   margin-top: 10px;
   color: var(--color-blue-dark);
   font-size: 1.2rem;
+}
+
+.productDescription {
+  margin-top: 6px;
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 .productMetaRow {
@@ -630,5 +836,9 @@
   .searchLike input {
     min-width: 0;
     width: 100%;
+  }
+
+  .publishGrid {
+    grid-template-columns: 1fr;
   }
 }

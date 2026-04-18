@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 /**
@@ -15,6 +15,7 @@ export function withAuth<P extends object>(
   Component: React.ComponentType<P>
 ) {
   return function ProtectedComponent(props: P) {
+    const router = useRouter();
     const { data: session, status } = useSession();
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
@@ -34,7 +35,7 @@ export function withAuth<P extends object>(
 
       // Si no está logueado, redirigir
       if (status === "unauthenticated") {
-        redirect("/");
+        router.replace("/");
         return;
       }
 
@@ -42,12 +43,12 @@ export function withAuth<P extends object>(
       const userId = session?.user?.id;
       if (!userId || userId === "undefined") {
         console.error("Usuario autenticado pero sin ID válido");
-        redirect("/");
+        router.replace("/");
         return;
       }
 
       setIsAuthorized(true);
-    }, [isMounted, status, session]);
+    }, [isMounted, router, session, status]);
 
     // No renderizar nada hasta estar montado
     if (!isMounted) {

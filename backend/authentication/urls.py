@@ -9,6 +9,11 @@ from .views import (
     user_profile,
     dashboard_overview,
     update_profile_picture,
+    public_profile_picture,
+    ProductCreateView,
+    NearbyProductListView,
+    ProductCategoryCatalogView,
+    ProductCategorySuggestionView,
 )
 
 urlpatterns = [
@@ -20,5 +25,10 @@ urlpatterns = [
     path('verify-email/', verify_email, name='verify_email'),
     path('profile/', user_profile, name='user_profile'),  # Ruta protegida
     path('profile/picture/', update_profile_picture, name='update_profile_picture'),
+    path('profile/picture/<int:user_id>/', public_profile_picture, name='public_profile_picture'),
     path('dashboard/', dashboard_overview, name='dashboard_overview'),
+    path('product-categories/', ProductCategoryCatalogView.as_view(), name='product_categories'),
+    path('product-categories/suggest/', ProductCategorySuggestionView.as_view(), name='product_category_suggest'),
+    path('products/', ProductCreateView.as_view(), name='products_create'),
+    path('products/nearby/', NearbyProductListView.as_view(), name='products_nearby'),
 ]

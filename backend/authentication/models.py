@@ -10,10 +10,11 @@ class UserProfile(models.Model):
     cedula = models.CharField(max_length=50, blank=True, null=True)
     google_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     profile_image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
-    picture = models.URLField(blank=True, null=True)
+    picture = models.TextField(blank=True, null=True)
     verification_token = models.CharField(max_length=100, blank=True, null=True)
     failed_verification_attempts = models.IntegerField(default=0)
     blocked_until = models.DateTimeField(null=True, blank=True)
+    country_code = models.CharField(max_length=2, blank=True, null=True, db_index=True)
 
     def is_blocked(self):
         """Verifica si el usuario está bajo restricción de tiempo"""
@@ -49,11 +50,19 @@ class Product(models.Model):
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="products")
     title = models.CharField(max_length=120)
+    description = models.TextField(blank=True, default="")
     category = models.CharField(max_length=80, blank=True)
-    image_url = models.URLField(blank=True, null=True)
+    image_url = models.TextField(blank=True, null=True)
     daily_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    country_code = models.CharField(max_length=2, db_index=True, blank=True, null=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, db_index=True, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, db_index=True, null=True, blank=True)
+    address = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_AVAILABLE)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
 
     def __str__(self):
         return f"{self.title} ({self.owner.email})"

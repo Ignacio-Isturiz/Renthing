@@ -1,12 +1,17 @@
 import uuid
 import random
 import logging
+import base64
+import binascii
 from datetime import timedelta
+from django.db import DataError
 from django.db.models import Avg, Sum
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.http import HttpResponse
+from django.shortcuts import redirect
 
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -15,17 +20,103 @@ from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.views import APIView
 
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
     ProductSerializer,
+    ProductCreateSerializer,
+    NearbyProductsQuerySerializer,
+    ProductCategorySuggestionSerializer,
     RentalRequestSerializer,
     EarningSerializer,
 )
 from .models import UserProfile, PasswordResetCode, Product, RentalRequest, Earning
+from .services.category_service import ProductCategoryCatalog
+from .services.location_service import CoordinatesResolver, CoordinatesValidationError
+from .services.product_service import ProductQueryService, ProductWriteService
 
 logger = logging.getLogger(__name__)
+
+
+class ProductCreateView(APIView):
+    """
+    POST: Crea un producto con ubicacion propia (latitud/longitud).
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ProductCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        product = ProductWriteService.create_product(
+            owner=request.user,
+            validated_data=serializer.validated_data,
+        )
+
+        return Response(ProductSerializer(product).data, status=status.HTTP_201_CREATED)
+
+
+class NearbyProductListView(APIView):
+    """
+    GET: Lista productos disponibles cercanos a una coordenada.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        query_serializer = NearbyProductsQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        query_data = query_serializer.validated_data
+
+        try:
+            coordinates = CoordinatesResolver.resolve(
+                latitude=query_data["latitude"],
+                longitude=query_data["longitude"],
+            )
+        except CoordinatesValidationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        products_qs = ProductQueryService.list_available_nearby(
+            latitude=coordinates.latitude,
+            longitude=coordinates.longitude,
+            radius_km=query_data["radius_km"],
+            limit=query_data["limit"],
+        )
+
+        payload = {
+            "origin": {
+                "latitude": coordinates.latitude,
+                "longitude": coordinates.longitude,
+            },
+            "radius_km": query_data["radius_km"],
+            "count": len(products_qs),
+            "products": ProductSerializer(products_qs, many=True).data,
+        }
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+class ProductCategoryCatalogView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response(
+            {"categories": ProductCategoryCatalog.list_options()},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ProductCategorySuggestionView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ProductCategorySuggestionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        suggestion = ProductCategoryCatalog.suggest(serializer.validated_data["title"])
+        return Response(suggestion, status=status.HTTP_200_OK)
 
 # --- VISTAS DE AUTENTICACIÓN Y REGISTRO ---
 
@@ -186,7 +277,7 @@ class LoginView(ObtainAuthToken):
             'user_id': user.pk,  # ID del usuario (entero)
             'id': user.pk,  # También enviar como 'id' para compatibilidad con NextAuth
             'email': user.email,
-            'user': UserSerializer(user).data
+            'user': UserSerializer(user, context={'request': request}).data
         }, status=status.HTTP_200_OK)
 
 # --- GOOGLE SIGN IN ---
@@ -246,7 +337,7 @@ def google_sign_in(request):
             'id': user.pk,  # ID del usuario (entero)
             'email': user.email,
             'token': token.key,
-            'user': UserSerializer(user).data
+            'user': UserSerializer(user, context={'request': request}).data
         }, status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED)
     
     except Exception as e:
@@ -333,7 +424,7 @@ def user_profile(request):
             'first_name': user.first_name,
             'last_name': user.last_name,
             'is_active': user.is_active,
-            'user': UserSerializer(user).data
+            'user': UserSerializer(user, context={'request': request}).data
         }, status=status.HTTP_200_OK)
     
     except Exception as e:
@@ -398,8 +489,8 @@ def dashboard_overview(request):
 @parser_classes([MultiPartParser, FormParser])
 def update_profile_picture(request):
     """
-    Actualiza la foto de perfil del usuario autenticado.
-    Espera un archivo en el campo multipart `image`.
+    Actualiza la foto de perfil a partir de un archivo, sin guardar en media.
+    Espera multipart con el campo `image`.
     """
     image = request.FILES.get('image')
     if not image:
@@ -414,9 +505,52 @@ def update_profile_picture(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    profile, _ = UserProfile.objects.get_or_create(user=request.user)
-    profile.profile_image = image
-    profile.save(update_fields=['profile_image'])
+    if image.size and image.size > 2 * 1024 * 1024:
+        return Response(
+            {'error': 'La imagen es demasiado pesada. Máximo permitido: 2MB.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    picture_url = request.build_absolute_uri(profile.profile_image.url)
-    return Response({'picture_url': picture_url}, status=status.HTTP_200_OK)
+    encoded_image = base64.b64encode(image.read()).decode('ascii')
+    picture_url = f"data:{image.content_type};base64,{encoded_image}"
+
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile.picture = picture_url
+    profile.profile_image = None
+    try:
+        profile.save(update_fields=['picture', 'profile_image'])
+    except DataError:
+        return Response(
+            {'error': 'La imagen no pudo guardarse. Intenta con una imagen mas pequena.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    public_picture_url = request.build_absolute_uri(f"/api/auth/profile/picture/{request.user.id}/")
+    return Response({'picture_url': public_picture_url}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_profile_picture(request, user_id):
+    user = User.objects.filter(pk=user_id).select_related('profile').first()
+    if not user or not hasattr(user, 'profile'):
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    picture = (user.profile.picture or '').strip()
+    if not picture:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if picture.startswith('http://') or picture.startswith('https://'):
+        return redirect(picture)
+
+    if picture.startswith('data:image/') and ',' in picture:
+        metadata, raw_data = picture.split(',', 1)
+        mime_type = metadata[5:].split(';')[0] or 'image/png'
+        try:
+            image_bytes = base64.b64decode(raw_data)
+        except (ValueError, binascii.Error):
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        return HttpResponse(image_bytes, content_type=mime_type)
+
+    return Response(status=status.HTTP_404_NOT_FOUND)

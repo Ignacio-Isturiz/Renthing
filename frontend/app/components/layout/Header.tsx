@@ -34,7 +34,7 @@ export default function Header() {
 
     const backendToken = session?.user?.backendToken;
     if (!backendToken) {
-      console.error("No hay token de backend para subir la imagen");
+      console.error("No hay token de backend para actualizar la imagen");
       event.target.value = "";
       return;
     }
@@ -43,9 +43,10 @@ export default function Header() {
       setIsUploadingImage(true);
       const formData = new FormData();
       formData.append("image", selectedFile);
+      const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile/picture/`,
+        `${apiBaseUrl}/api/auth/profile/picture/`,
         {
           method: "PATCH",
           headers: {
@@ -55,7 +56,21 @@ export default function Header() {
         }
       );
 
-      const data = await response.json();
+      const rawResponse = await response.text();
+      let data: { error?: string; picture_url?: string } = {};
+
+      if (rawResponse) {
+        try {
+          data = JSON.parse(rawResponse) as { error?: string; picture_url?: string };
+        } catch {
+          if (!response.ok) {
+            throw new Error(
+              `Respuesta inesperada del servidor (${response.status}). Verifica NEXT_PUBLIC_API_URL y el backend.`
+            );
+          }
+        }
+      }
+
       if (!response.ok) {
         throw new Error(data?.error || "No se pudo actualizar la foto de perfil.");
       }
@@ -64,7 +79,7 @@ export default function Header() {
         await update({ image: data.picture_url });
       }
     } catch (error) {
-      console.error("Error subiendo foto de perfil:", error);
+      console.error("Error actualizando foto de perfil:", error);
     } finally {
       setIsUploadingImage(false);
       event.target.value = "";
